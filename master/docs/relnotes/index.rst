@@ -68,6 +68,8 @@ Features
 
 * :bb:chsrc:`GitPoller` now supports detecting new branches
 
+* GitHub change hook now supports payload validation using shared secret, see :ref:`GitHub-hook` for details.
+
 Fixes
 ~~~~~
 
