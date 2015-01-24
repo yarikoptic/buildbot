@@ -32,13 +32,16 @@ class ChangeHookResource(resource.Resource):
     contentType = "text/html; charset=utf-8"
     children = {}
 
-    def __init__(self, dialects={}):
+    def __init__(self, dialects=None):
         """
         The keys of 'dialects' select a modules to load under
         master/buildbot/status/web/hooks/
         The value is passed to the module's getChanges function, providing
         configuration options to the dialect.
         """
+        if dialects is None:
+            dialects = {}
+
         self.dialects = dialects
         self.request_dialect = None
 
@@ -119,7 +122,7 @@ class ChangeHookResource(resource.Resource):
         else:
             dialect = 'base'
 
-        if dialect in self.dialects.keys():
+        if dialect in self.dialects:
             log.msg("Attempting to load module buildbot.status.web.hooks." + dialect)
             tempModule = namedModule('buildbot.status.web.hooks.' + dialect)
             changes, src = tempModule.getChanges(request, self.dialects[dialect])
