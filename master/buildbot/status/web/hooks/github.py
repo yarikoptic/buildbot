@@ -17,6 +17,7 @@ from hashlib import sha1
 import hmac
 import logging
 import re
+import requests
 
 from dateutil.parser import parse as dateparse
 from twisted.python import log
@@ -43,11 +44,13 @@ def process_change(payload, user, repo, repo_url, project, codebase=None):
 
     # We only care about regular heads, i.e. branches
     match = re.match(r"^refs\/heads\/(.+)$", refname)
+
     if not match:
         log.msg("Ignoring refname `%s': Not a branch" % refname)
         return changes
 
     branch = match.group(1)
+
     if payload.get('deleted'):
         log.msg("Branch `%s' deleted, ignoring" % branch)
         return changes
@@ -78,6 +81,74 @@ def process_change(payload, user, repo, repo_url, project, codebase=None):
             'when_timestamp': when_timestamp,
             'branch': branch,
             'revlink': commit['url'],
+            'repository': repo_url,
+            'project': project
+        }
+
+        if codebase is not None:
+            change['codebase'] = codebase
+
+        changes.append(change)
+
+    return changes
+
+
+def process_pull_request(payload, user, repo, repo_url, project, codebase=None):
+    """
+    Consumes the JSON as a python object and actually starts the build.
+
+    :arguments:
+        payload
+            Python Object that represents the JSON sent by GitHub Service
+            Hook.
+    """
+    changes = []
+    number = payload['number']
+
+    # We only care about opened/reopened/synchronize pull requests
+    if payload['action'] not in ['opened', 'reopened', 'synchronize']:
+        log.msg("Ignoring `%s': Not an opened pull request" % number)
+        return changes
+
+    # refname = payload['pull_request']['head']['ref']
+    branch = 'refs/pull/%s/head' % number
+    category = 'pull-request'
+
+    if payload['pull_request']['mergeable'] == False:
+        log.msg("Pull request `%s' not mergeable, ignoring" % branch)
+        return changes
+
+    r = requests.get(payload['pull_request']['commits_url'])
+    commits = json.loads(r.text)
+
+    for commit in commits:
+        if 'distinct' in commit and not commit['distinct']:
+            log.msg('Commit `%s` is a non-distinct commit, ignoring...' %
+                    (commit['sha'],))
+            continue
+
+        files = []
+        if 'added' in commit:
+            files.extend(commit['added'])
+        if 'modified' in commit:
+            files.extend(commit['modified'])
+        if 'removed' in commit:
+            files.extend(commit['removed'])
+
+        when_timestamp = dateparse(commit['commit']['author']['date'])
+
+        log.msg("New PR revision: %s" % commit['sha'][:8])
+
+        change = {
+            'author': '%s <%s>' % (commit['commit']['author']['name'],
+                                   commit['commit']['author']['email']),
+            'files': files,
+            'comments': commit['commit']['message'],
+            'revision': commit['sha'],
+            'when_timestamp': when_timestamp,
+            'branch': branch,
+            'category': category,
+            'revlink': commit['commit']['url'],
             'repository': repo_url,
             'project': project
         }
@@ -157,14 +228,29 @@ class GitHubEventHandler(object):
         user = None
         # user = payload['pusher']['name']
         repo = payload['repository']['name']
-        repo_url = payload['repository']['url']
+        repo_url = payload['repository']['clone_url']
         # NOTE: what would be a reasonable value for project?
         # project = request.args.get('project', [''])[0]
-        project = payload['repository']['full_name']
+        project = payload['repository']['name']
 
         changes = process_change(payload, user, repo, repo_url, project,
                                  self._codebase)
         log.msg("Received %d changes from github" % len(changes))
+        return (changes, 'git')
+
+    def handle_pull_request(self, payload):
+        # This field is unused:
+        user = None
+        # user = payload['pusher']['name']
+        repo = payload['repository']['name']
+        repo_url = payload['repository']['clone_url']
+        # NOTE: what would be a reasonable value for project?
+        # project = request.args.get('project', [''])[0]
+        project = payload['repository']['name']
+
+        changes = process_pull_request(payload, user, repo, repo_url, project,
+                                       self._codebase)
+        log.msg("Received %d PR changes from github" % len(changes))
         return (changes, 'git')
 
 
