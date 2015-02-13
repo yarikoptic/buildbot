@@ -128,16 +128,18 @@ def process_pull_request(payload, user, repo, repo_url, project, codebase=None):
             continue
 
         files = []
-        r = requests.get(commit['url'])
-        commit_files = json.loads(r.text)
+        if url in commit:
+            r = requests.get(commit['url'])
+            commit_files = json.loads(r.text)
 
-        for f in commit_files['files']:
-            if f['status'] == 'added':
-                files.append(f['filename'])
-            if f['status'] == 'modified':
-                files.append(f['filename'])
-            if f['status'] == 'removed':
-                files.append(f['filename'])
+            if commit_files and files in commit_files:
+                for f in commit_files['files']:
+                    if f['status'] == 'added':
+                        files.append(f['filename'])
+                    if f['status'] == 'modified':
+                        files.append(f['filename'])
+                    if f['status'] == 'removed':
+                        files.append(f['filename'])
 
         when_timestamp = dateparse(commit['commit']['author']['date'])
 
