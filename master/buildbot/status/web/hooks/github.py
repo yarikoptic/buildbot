@@ -156,7 +156,7 @@ def process_pull_request(payload, user, repo, repo_url, project, codebase=None):
             'when_timestamp': when_timestamp,
             'branch': branch,
             'category': category,
-            'revlink': commit_url
+            'revlink': commit_url,
             'repository': repo_url,
             'project': project
         }
