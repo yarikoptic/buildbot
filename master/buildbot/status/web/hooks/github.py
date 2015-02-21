@@ -129,12 +129,12 @@ def process_pull_request(payload, user, repo, repo_url, project, codebase=None):
 
         files = []
         commit_url = ''
-        if url in commit:
+        if 'url' in commit:
             commit_url = commit['url']
             r = requests.get(commit_url)
             commit_files = json.loads(r.text)
 
-            if commit_files and files in commit_files:
+            if commit_files and 'files' in commit_files:
                 for f in commit_files['files']:
                     if f['status'] == 'added':
                         files.append(f['filename'])
