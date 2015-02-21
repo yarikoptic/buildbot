@@ -128,8 +128,10 @@ def process_pull_request(payload, user, repo, repo_url, project, codebase=None):
             continue
 
         files = []
+        commit_url = ''
         if url in commit:
-            r = requests.get(commit['url'])
+            commit_url = commit['url']
+            r = requests.get(commit_url)
             commit_files = json.loads(r.text)
 
             if commit_files and files in commit_files:
@@ -154,7 +156,7 @@ def process_pull_request(payload, user, repo, repo_url, project, codebase=None):
             'when_timestamp': when_timestamp,
             'branch': branch,
             'category': category,
-            'revlink': commit['commit']['url'],
+            'revlink': commit_url
             'repository': repo_url,
             'project': project
         }
