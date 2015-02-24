@@ -118,7 +118,7 @@ def process_pull_request(payload, user, repo, repo_url, project, codebase=None):
         log.msg("Pull request `%s' not mergeable, ignoring" % branch)
         return changes
 
-    r = requests.get(payload['pull_request']['commits_url'])
+    r = requests.get(payload['pull_request']['commits_url'] + "?per_page=100")
     commits = json.loads(r.text)
 
     for commit in commits:
