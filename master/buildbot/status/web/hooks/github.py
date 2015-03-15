@@ -16,6 +16,7 @@
 import hmac
 import logging
 import re
+import requests
 
 from hashlib import sha1
 
@@ -183,7 +184,7 @@ class GitHubEventHandler(object):
 
         return changes
 
-    def _process_pull_request(payload, user, repo, repo_url, project, codebase=None):
+    def _process_pull_request(self, payload, user, repo, repo_url, project, codebase=None):
         changes = []
         number = payload['number']
 
