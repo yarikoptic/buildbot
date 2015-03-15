@@ -29,7 +29,7 @@ To add status targets, you just append more objects to this list::
                                             {"channel": "#example2",
                                              "password": "somesecretpassword"}]))
 
-Most status delivery objects take a ``categories=`` argument, which can contain a list of `category` names: in this case, it will only show status for Builders that are in one of the named categories.
+Most status delivery objects take a ``tags=`` argument, which can contain a list of `tag` names: in this case, it will only show status for Builders that have one of the named tags.
 
 .. note:: Implementation Note
 
@@ -138,7 +138,7 @@ The table below lists all of the internal pages and the URLs that can be used to
 
     By adding one or more ``builder=`` query arguments, the Waterfall is restricted to only showing information about the given Builders.
     By adding one or more ``branch=`` query arguments, the display is restricted to showing information about the given branches.
-    In addition, adding one or more ``category=`` query arguments to the URL will limit the display to Builders that were defined with one of the given categories.
+    In addition, adding one or more ``tag=`` query arguments to the URL will limit the display to Builders that were defined with one of the given tags.
 
     A ``show_events=true`` query argument causes the display to include non-:class:`Build` events, like slaves attaching and detaching, as well as reconfiguration events.
     ``show_events=false`` hides these events.
@@ -157,7 +157,7 @@ The table below lists all of the internal pages and the URLs that can be used to
     This provides a chronologically oriented display of builders, by revision.
     The builders are listed down the left side of the page, and the revisions are listed across the top.
 
-    By adding one or more ``category=`` arguments the grid will be restricted to revisions in those categories.
+    By adding one or more ``tag=`` arguments the grid will be restricted to builders with those tags.
 
     A :samp:`width={N}` argument will limit the number of revisions shown to *N*, defaulting to 5.
 
@@ -183,7 +183,7 @@ The table below lists all of the internal pages and the URLs that can be used to
     By adding one or more ``builder=`` query arguments, the Console view is restricted to only showing information about the given Builders.
     Adding a ``repository=`` argument will limit display to a given repository.
     By adding one or more ``branch=`` query arguments, the display is restricted to showing information about the given branches.
-    In addition, adding one or more ``category=`` query arguments to the URL will limit the display to Builders that were defined with one of the given categories.
+    In addition, adding one or more ``tag=`` query arguments to the URL will limit the display to Builders that were defined with one of the given tags.
     With the ``project=`` query argument, it's possible to restrict the view to changes from the given project.
     With the ``codebase=`` query argument, it's possible to restrict the view to changes for the given codebase.
 
@@ -1094,12 +1094,12 @@ MailNotifier arguments
 ``builders`` (list of strings)
     A list of builder names for which mail should be sent.
     Defaults to ``None`` (send mail for all builds).
-    Use either builders or categories, but not both.
+    Use either builders or tags, but not both.
 
-``categories`` (list of strings)
-    A list of category names to serve status information for.
-    Defaults to ``None`` (all categories).
-    Use either builders or categories, but not both.
+``tags`` (list of strings)
+    A list of tag names to serve status information for.
+    Defaults to ``None`` (all tags).
+    Use either builders or tags, but not both.
 
 ``addLogs`` (boolean)
     If ``True``, include all build logs as attachments to the messages.
@@ -1391,7 +1391,7 @@ If the ``allowForce=True`` option was used, some additional commands will be ava
     *REASON* will be added to the build status to explain why it was stopped.
     You might use this if you committed a bug, corrected it right away, and don't want to wait for the first build (which is destined to fail) to complete before starting the second (hopefully fixed) build.
 
-If the `categories` is set to a category of builders (see the categories option in :ref:`Builder-Configuration`) changes related to only that category of builders will be sent to the channel.
+If the `tags` is set (see the tags option in :ref:`Builder-Configuration`) changes related to only builders belonging to those tags of builders will be sent to the channel.
 
 If the `useRevisions` option is set to `True`, the IRC bot will send status messages that replace the build number with a list of revisions that are contained in that build.
 So instead of seeing `build #253 of ...`, you would see something like `build containing revisions [a87b2c4]`.
@@ -1517,7 +1517,7 @@ GerritStatusPush can send a separate review for each build that completes, or a 
 
    :param summaryCB: (optional) callback that is called each time a buildset finishes, and that is used to define a message and review approvals depending on the build result.
    :param summaryArg: (optional) argument passed to the summary callback.
- 
+
                       If :py:func:`summaryCB` callback is specified, determines the message and score to give when sending a single review summarizing all of the builds.
                       It should return a dictionary:
 
@@ -1596,6 +1596,43 @@ By default `sha` is defined as: `%(src::revision)s`.
 In case any of `repoOwner`, `repoName` or `sha` returns `None`, `False` or empty string, the plugin will skip sending the status.
 
 You can define custom start and end build messages using the `startDescription` and `endDescription` optional interpolation arguments.
+
+Starting with Buildbot version 0.8.11, :class:`GitHubStatus` supports additional parameter -- ``baseURL`` -- that allows to specify a different API base endpoint.
+This is required if you work with GitHub Enterprise installation.
+This feature requires ``txgithub`` of version 0.2.0 or better.
+
+StashStatusPush
+~~~~~~~~~~~~~~~
+
+.. @cindex StashStatusPush
+.. py:class:: buildbot.status.status_stash.StashStatusPush
+
+::
+
+    from buildbot.status.status_stash import StashStatusPush
+
+    ss = StashStatusPush('https://stash.example.com:8080/',
+                         'stash_username',
+                         'secret_password')
+
+    c['status'].append(ss)
+
+
+:class:`StashStatusPush` publishes build status using `Stash Build Integration REST API <https://developer.atlassian.com/static/rest/stash/3.6.0/stash-build-integration-rest.html>`_.
+The build status is published to a specific commit SHA in Stash.
+It tracks the last build for each builderName for each commit built.
+
+Specifically, it follows the `Updating build status for commits <https://developer.atlassian.com/stash/docs/latest/how-tos/updating-build-status-for-commits.html>`_ document.
+
+It uses the standard Python Twisted Agent to make REST requests to the stash server.
+It uses HTTP Basic AUTH.
+As a result, we recommend you use https in your base_url rather than http.
+If you use https, it requires `pyOpenSSL`.
+
+Configuration requires exactly 3 parameters:
+`base_url` is the base url of the stash host, up to and optionally including the first / of the path.
+`user` is the stash user to post as
+`password` is the stash user's password
 
 .. [#] Apparently this is the same way http://buildd.debian.org displays build status
 

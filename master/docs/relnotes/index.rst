@@ -11,6 +11,10 @@ The following are the release notes for Buildbot |version|.
 Master
 ------
 
+Requirements:
+
+* Buildbot works python-dateutil >= 1.5
+
 Features
 ~~~~~~~~
 
@@ -68,16 +72,32 @@ Features
 
 * :bb:chsrc:`GitPoller` now supports detecting new branches
 
+* :bb:step:`MasterShellCommand` now renders the ``path`` argument.
+
+* :class:`~buildbot.process.buildstep.ShellMixin`: the ``workdir`` can now be overridden in the call to ``makeRemoteShellCommand``.
+
+* GitHub status target now allows to specify a different base URL for the API (usefule for GitHub enterprise installations).
+  This feature requires `txgithub` of version 0.2.0 or better.
+
 * GitHub change hook now supports payload validation using shared secret, see :ref:`GitHub-hook` for details.
+
+* Added StashStatusPush status hook for Atlassian Stash
+
+* Builders can now have multiple "tags" associated with them. Tags can be used in various status classes as filters (eg, on the waterfall page).
 
 Fixes
 ~~~~~
 
 * GitHub change hook now correctly responds to ping events.
 * ``buildbot.steps.http`` steps now correctly have ``url`` parameter renderable
+* :bb:step:`MasterShellCommand` now correctly logs the working directory where it was run.
+* With Git(), force the updating submodules to ensure local changes by the build are overwitten.
+  This both ensures more consistent builds and avoids errors when updating submodules.
 
 Deprecations, Removals, and Non-Compatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* The builder parameter "category" is deprecated and is replaced by a parameter called "tags".
 
 Changes for Developers
 ~~~~~~~~~~~~~~~~~~~~~~
