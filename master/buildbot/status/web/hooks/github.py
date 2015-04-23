@@ -35,10 +35,11 @@ _HEADER_SIGNATURE = 'X-Hub-Signature'
 
 
 class GitHubEventHandler(object):
-    def __init__(self, secret, strict, codebase=None):
+    def __init__(self, secret, strict, codebase=None, token=None):
         self._secret = secret
         self._strict = strict
         self._codebase = codebase
+        self._token = token
 
         if self._strict and not self._secret:
             raise ValueError('Strict mode is requested '
@@ -184,6 +185,13 @@ class GitHubEventHandler(object):
 
         return changes
 
+    def _requests_get(self, url):
+        """Given a url, attach an access token if we have one and send a get"""
+        if self._token:
+            suf = '&' if '?' in url else '&'
+            url += "%saccess_token=%s" % (suf, self._token)
+        return requests.get(url)
+
     def _process_pull_request(self, payload, user, repo, repo_url, project, codebase=None):
         changes = []
         number = payload['number']
@@ -201,8 +209,15 @@ class GitHubEventHandler(object):
             log.msg("Pull request `%s' not mergeable, ignoring" % branch)
             return changes
 
-        r = requests.get(payload['pull_request']['commits_url'] + "?per_page=100")
+        r = self._requests_get(
+            payload['pull_request']['commits_url'] + "?per_page=100")
         commits = json.loads(r.text)
+
+        if 'message' in commits:
+            log.msg('Instead of commits we have received a msg from github: %s'
+                    % commits['message'])
+            log.msg('Not analyzing the rest')
+            return changes
 
         for commit in commits:
             if 'distinct' in commit and not commit['distinct']:
@@ -214,7 +229,7 @@ class GitHubEventHandler(object):
             commit_url = ''
             if 'url' in commit:
                 commit_url = commit['url']
-                r = requests.get(commit_url)
+                r = self._requests_get(commit_url)
                 commit_files = json.loads(r.text)
 
                 if commit_files and 'files' in commit_files:
