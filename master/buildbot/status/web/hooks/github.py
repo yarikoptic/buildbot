@@ -185,11 +185,13 @@ class GitHubEventHandler(object):
 
         return changes
 
-    def _requests_get(self, url):
+    def _requests_get(self, url, **opts):
         """Given a url, attach an access token if we have one and send a get"""
         if self._token:
-            suf = '&' if '?' in url else '&'
-            url += "%saccess_token=%s" % (suf, self._token)
+            opts['access_token'] = str(self._token)
+        opts_str = "&".join("%s=%s" % i for i in opts.iteritems())
+        if opts_str:
+            url += "?" + opts_str
         return requests.get(url)
 
     def _process_pull_request(self, payload, user, repo, repo_url, project, codebase=None):
@@ -209,8 +211,8 @@ class GitHubEventHandler(object):
             log.msg("Pull request `%s' not mergeable, ignoring" % branch)
             return changes
 
-        r = self._requests_get(
-            payload['pull_request']['commits_url'] + "?per_page=100")
+        r = self._requests_get(payload['pull_request']['commits_url'],
+                               per_page=100)
         commits = json.loads(r.text)
 
         if 'message' in commits:
