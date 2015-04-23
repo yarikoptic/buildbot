@@ -282,5 +282,7 @@ def getChanges(request, options=None):
 
     handler = klass(options.get('secret', None),
                     options.get('strict', False),
-                    options.get('codebase', None))
+                    options.get('codebase', None),
+                    options.get('token', None),
+                    )
     return handler.process(request)
